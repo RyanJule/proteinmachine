@@ -1,34 +1,27 @@
 # Protein Scraper
 
-This project is a Protein Scraper that extracts protein data from UniProt and validates it against an existing dataset. 
+This project is a Protein Scraper that extracts protein data from UniProt and validates it against an existing dataset.
 
 ## Requirements
 
 - Windows OS
-- Git Bash (for running the shell script)
 - Internet connection
 
 ## Setup Instructions
 
-1. **Download and Install Git Bash**:
-   - If you don't have Git Bash, download and install it from [here](https://gitforwindows.org/).
+1. **Download the Repository**:
+   - Download the repository as a ZIP file from [here](https://github.com/RyanJule/proteinmachine/archive/refs/heads/main.zip) and extract it.
 
-2. **Clone the Repository**:
-   - Open Git Bash and run the following command to clone the repository:
-    ```bash
-     git clone https://github.com/RyanJule/proteinmachine.git
-     cd proteinmachine
-     ```
-3. **Run the Setup Script**:
-   - Make sure you are in the repository directory and run the following command to execute the setup script:
-     ```bash
-     ./setup.sh
-     ```
+2. **Run the Setup Script**:
+   - Navigate to the extracted folder and double-click on `setup.bat` to run the setup script.
 
-4. **Run the Application**:
-   - After the setup script completes, you can start the application by running:
-     ```bash
-     source venv/Scripts/activate
+3. **Run the Application**:
+   - After the setup script completes, activate the virtual environment by running:
+     ```batch
+     venv\Scripts\activate
+     ```
+   - Start the application by running:
+     ```batch
      python proteinscraper.py
      ```
 
