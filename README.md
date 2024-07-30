@@ -15,11 +15,10 @@ This project is a Protein Scraper that extracts protein data from UniProt and va
 
 2. **Clone the Repository**:
    - Open Git Bash and run the following command to clone the repository:
-     ```bash
-     git clone <your-repo-url>
-     cd <your-repo-directory>
+    ```bash
+     git clone https://github.com/RyanJule/proteinmachine.git
+     cd proteinmachine
      ```
-
 3. **Run the Setup Script**:
    - Make sure you are in the repository directory and run the following command to execute the setup script:
      ```bash
