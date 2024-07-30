@@ -1,55 +1,50 @@
-import asyncio
 import os
-import pandas as pd
 import re
-from pyppeteer import launch
+import pandas as pd
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service as ChromeService
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from webdriver_manager.core.utils import ChromeType
+from webdriver_manager.chrome import ChromeDriverManager
 from bs4 import BeautifulSoup
 import time
 from requests.exceptions import ConnectionError
 import tkinter as tk
 from tkinter import filedialog, messagebox
 from tkinter.ttk import Progressbar
+import asyncio
 import nest_asyncio
-
-PYPPETEER_CHROMIUM_REVISION = '1263111'
-
-os.environ['PYPPETEER_CHROMIUM_REVISION'] = PYPPETEER_CHROMIUM_REVISION
 
 nest_asyncio.apply()
 
 MAX_RETRIES = 5
 RETRY_BACKOFF = 2
 
-# Function to fetch and parse the HTML page using Pyppeteer
-async def fetch_range_html_pyppeteer(uniprot_id):
+def fetch_range_html_selenium(driver, uniprot_id):
+    url = f"https://www.uniprot.org/uniprotkb/{uniprot_id}/entry"
+    driver.get(url)
     try:
-        browser = await launch(headless=True)
-        page = await browser.newPage()
-        url = f"https://www.uniprot.org/uniprotkb/{uniprot_id}/entry"
-        await page.goto(url)
-        # Wait for the PTM/Processing section to load
-        await page.waitForSelector('section#ptm_processing')
-        # Wait for the feature table to load within the section
-        await page.waitForSelector('section#ptm_processing protvista-datatable.feature')
-        html = await page.content()
-        await browser.close()
+        WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, 'section#ptm_processing protvista-datatable.feature'))
+        )
+        time.sleep(2)
+        html = driver.page_source
         return html
     except Exception as e:
         print(f"Error fetching range HTML for {uniprot_id}: {e}")
         return ""
-# Function to fetch the protein name from the main page using Pyppeteer
-async def fetch_protein_name_pyppeteer(uniprot_id):
+
+def fetch_protein_name_selenium(driver, uniprot_id):
+    url = f"https://www.uniprot.org/uniprotkb/{uniprot_id}/entry"
+    driver.get(url)
     try:
-        browser = await launch(headless=True)
-        page = await browser.newPage()
-        url = f"https://www.uniprot.org/uniprotkb/{uniprot_id}/entry"
-        await page.goto(url)
-        # Wait for the PTM/Processing table to load
-        await page.waitForSelector('protvista-datatable.feature')
-        html = await page.content()
-        await browser.close()
-        soup = BeautifulSoup(html, 'html.parser')
-        # Extract the protein name
+        WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, 'protvista-datatable.feature'))
+        )
+        time.sleep(2)
+        soup = BeautifulSoup(driver.page_source, 'html.parser')
         name_element = soup.select_one('body div#root div.N8ovH div.vJtX6 div.bjUwP.wcdej.entry-page.oVQVq main.wcDnA ul.info-list.info-list--columns li div.decorated-list-item div.decorated-list-item__content strong')
         protein_name = name_element.text.strip() if name_element else 'N/A'
         return protein_name
@@ -57,7 +52,6 @@ async def fetch_protein_name_pyppeteer(uniprot_id):
         print(f"Error fetching protein name for {uniprot_id}: {e}")
         return 'N/A'
 
-# Function to extract the desired data from the HTML
 def extract_chain_position(html, protein_name):
     soup = BeautifulSoup(html, 'html.parser')
     section = soup.find('section', id='ptm_processing')
@@ -110,16 +104,15 @@ def extract_chain_position(html, protein_name):
 
     raise Exception("No matching Chain row found for the given protein name")
 
-# Function to fetch features HTML using Pyppeteer
-async def fetch_features_html_pyppeteer(uniprot_id, range):
+def fetch_features_html_selenium(driver, uniprot_id, range):
+    url = f"https://web.expasy.org/cgi-bin/protparam/protparam_bis.cgi?{uniprot_id}@{range}@"
+    driver.get(url)
     try:
-        browser = await launch(headless=True)
-        page = await browser.newPage()
-        url = f"https://web.expasy.org/cgi-bin/protparam/protparam_bis.cgi?{uniprot_id}@{range}@"
-        await page.goto(url)
-        await page.waitForXPath("//*[contains(text(), 'Grand average of hydropathicity (GRAVY)')]")
-        html = await page.content()
-        await browser.close()
+        WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.XPATH, "//*[contains(text(), 'Grand average of hydropathicity (GRAVY)')]"))
+        )
+        time.sleep(2)
+        html = driver.page_source
         return html
     except Exception as e:
         print(f"Error fetching features HTML for {uniprot_id}: {e}")
@@ -143,15 +136,15 @@ def extract_features(html, range, id):
         data[key] = match.group(1) if match else 'N/A'
     return data
 
-async def scrape_from_id(uniprot_id):
+async def scrape_from_id(driver, uniprot_id):
     for attempt in range(MAX_RETRIES):
         try:
-            protein_name = await fetch_protein_name_pyppeteer(uniprot_id)
-            range_html = await fetch_range_html_pyppeteer(uniprot_id)
+            protein_name = fetch_protein_name_selenium(driver, uniprot_id)
+            range_html = fetch_range_html_selenium(driver, uniprot_id)
             if not range_html:
                 continue
             chain_position = extract_chain_position(range_html, protein_name)
-            features_html = await fetch_features_html_pyppeteer(uniprot_id, chain_position)
+            features_html = fetch_features_html_selenium(driver, uniprot_id, chain_position)
             if not features_html:
                 continue
             feature_data = extract_features(features_html, chain_position, uniprot_id)
@@ -169,13 +162,20 @@ async def run_scraping(validate, input_path, output_path, progress, progress_lab
     results_df = pd.DataFrame(columns=['Name', 'P. sequence', 'Protein ID', 'pI', 'MW', 'Instability Index', 'Aliphatic index', 'GRAVY'])
     uniprot_ids = df['Protein ID'].tolist()
     
+    service = ChromeService(executable_path=ChromeDriverManager(chrome_type=ChromeType.CHROMIUM).install())
+    options = webdriver.ChromeOptions()
+    options.add_argument('--headless')
+    driver = webdriver.Chrome(service=service, options=options)
+    
     for i, uniprot_id in enumerate(uniprot_ids):
-        scraped_data = await scrape_from_id(uniprot_id)
+        scraped_data = await scrape_from_id(driver, uniprot_id)
         if scraped_data:
             results_df = pd.concat([results_df, pd.DataFrame([scraped_data])], ignore_index=True)
         progress['value'] = (i + 1) / len(uniprot_ids) * 100
         progress_label.config(text=f"Progress: {i + 1}/{len(uniprot_ids)}")
         progress.update()
+    
+    driver.quit()
     
     results_df.to_excel(output_path, index=False)
     print("Scraping completed and results saved to", output_path)

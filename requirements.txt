@@ -1,6 +1,8 @@
 pandas
 beautifulsoup4
-nest-asyncio
-pyppeteer
+requests
+selenium
+webdriver-manager
 tk
+nest-asyncio
 openpyxl
