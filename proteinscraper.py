@@ -6,7 +6,7 @@ from selenium.webdriver.chrome.service import Service as ChromeService
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from webdriver_manager.core.utils import ChromeType
+from webdriver_manager.core.os_manager import ChromeType
 from webdriver_manager.chrome import ChromeDriverManager
 from bs4 import BeautifulSoup
 import time
@@ -157,7 +157,7 @@ async def scrape_from_id(driver, uniprot_id):
                 print(f"Max retries reached for {uniprot_id}. Skipping.")
                 return None
 
-async def run_scraping(validate, input_path, output_path, progress, progress_label):
+async def run_scraping(validate, input_path, progress, progress_label):
     df = pd.read_excel(input_path)
     results_df = pd.DataFrame(columns=['Name', 'P. sequence', 'Protein ID', 'pI', 'MW', 'Instability Index', 'Aliphatic index', 'GRAVY'])
     uniprot_ids = df['Protein ID'].tolist()
@@ -177,6 +177,7 @@ async def run_scraping(validate, input_path, output_path, progress, progress_lab
     
     driver.quit()
     
+    output_path = f"{os.path.splitext(input_path)[0]}_scraped.xlsx"
     results_df.to_excel(output_path, index=False)
     print("Scraping completed and results saved to", output_path)
     
@@ -215,21 +216,16 @@ async def run_scraping(validate, input_path, output_path, progress, progress_lab
         else:
             messagebox.showinfo("Validation Complete", "Validation complete. No discrepancies found.")
 
-def start_scraping(validate_var, input_var, output_var, progress, progress_label):
+def start_scraping(validate_var, input_var, progress, progress_label):
     validate = validate_var.get()
     input_path = input_var.get()
-    output_path = output_var.get()
-    if not input_path or not output_path:
-        messagebox.showerror("Error", "Please provide both input and output file paths.")
+    if not input_path:
+        messagebox.showerror("Error", "Please provide an input file path.")
         return
-    asyncio.run(run_scraping(validate, input_path, output_path, progress, progress_label))
+    asyncio.run(run_scraping(validate, input_path, progress, progress_label))
 
 def browse_file(var):
     filename = filedialog.askopenfilename(filetypes=[("Excel files", "*.xlsx")])
-    var.set(filename)
-
-def save_file(var):
-    filename = filedialog.asksaveasfilename(defaultextension=".xlsx", filetypes=[("Excel files", "*.xlsx")])
     var.set(filename)
 
 def main():
@@ -241,23 +237,19 @@ def main():
     tk.Entry(root, textvariable=input_var, width=50).grid(row=0, column=1, padx=10, pady=10)
     tk.Button(root, text="Browse", command=lambda: browse_file(input_var)).grid(row=0, column=2, padx=10, pady=10)
 
-    tk.Label(root, text="Output File:").grid(row=1, column=0, padx=10, pady=10)
-    output_var = tk.StringVar()
-    tk.Entry(root, textvariable=output_var, width=50).grid(row=1, column=1, padx=10, pady=10)
-    tk.Button(root, text="Browse", command=lambda: save_file(output_var)).grid(row=1, column=2, padx=10, pady=10)
-    
     validate_var = tk.BooleanVar()
-    tk.Checkbutton(root, text="Validate Data", variable=validate_var).grid(row=2, column=0, columnspan=3, padx=10, pady=10)
+    tk.Checkbutton(root, text="Validate Data", variable=validate_var).grid(row=1, column=0, columnspan=3, padx=10, pady=10)
     
     progress_label = tk.Label(root, text="Progress: 0/0")
-    progress_label.grid(row=3, column=0, columnspan=3, padx=10, pady=10)
+    progress_label.grid(row=2, column=0, columnspan=3, padx=10, pady=10)
     
     progress = Progressbar(root, orient=tk.HORIZONTAL, length=400, mode='determinate')
-    progress.grid(row=4, column=0, columnspan=3, padx=10, pady=10)
+    progress.grid(row=3, column=0, columnspan=3, padx=10, pady=10)
     
-    tk.Button(root, text="Run", command=lambda: start_scraping(validate_var, input_var, output_var, progress, progress_label)).grid(row=5, column=0, columnspan=3, padx=10, pady=10)
+    tk.Button(root, text="Run", command=lambda: start_scraping(validate_var, input_var, progress, progress_label)).grid(row=4, column=0, columnspan=3, padx=10, pady=10)
     
     root.mainloop()
 
 if __name__ == "__main__":
     main()
+
