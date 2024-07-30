@@ -1,4 +1,5 @@
 import asyncio
+import os
 import pandas as pd
 import re
 from pyppeteer import launch
@@ -9,6 +10,10 @@ import tkinter as tk
 from tkinter import filedialog, messagebox
 from tkinter.ttk import Progressbar
 import nest_asyncio
+
+PYPPETEER_CHROMIUM_REVISION = '1263111'
+
+os.environ['PYPPETEER_CHROMIUM_REVISION'] = PYPPETEER_CHROMIUM_REVISION
 
 nest_asyncio.apply()
 
