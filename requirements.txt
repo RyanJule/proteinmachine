@@ -3,6 +3,5 @@ beautifulsoup4
 requests
 selenium
 webdriver-manager
-tk
 nest-asyncio
 openpyxl
