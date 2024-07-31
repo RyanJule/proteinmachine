@@ -20,17 +20,25 @@ jobs:
       uses: actions/checkout@v2
 
     - name: Set up Python
+      if: matrix.os == 'windows-latest' || matrix.os == 'macos-latest'
       uses: actions/setup-python@v2
       with:
         python-version: '3.8'
-        
-    - name: Install dependencies
+    
+    - name: Set up Docker container for Ubuntu
+      if: matrix.os == 'ubuntu-latest'
       run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install pyinstaller
-
+        docker run --name build-env -v ${{ github.workspace }}:/workspace -w /workspace ubuntu:20.04 /bin/bash -c "
+        apt-get update &&
+        apt-get install -y python3 python3-pip &&
+        python3 -m pip install --upgrade pip &&
+        pip3 install -r requirements.txt &&
+        pip3 install pyinstaller &&
+        pyinstaller --onefile --name=proteinscraper proteinscraper.py &&
+        cp dist/proteinscraper /workspace/dist/"
+    
     - name: Build executable
+      if: matrix.os == 'windows-latest' || matrix.os == 'macos-latest'
       run: |
         pyinstaller --onefile --name=proteinscraper proteinscraper.py
 
