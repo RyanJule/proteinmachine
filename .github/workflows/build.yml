@@ -24,7 +24,19 @@ jobs:
       uses: actions/setup-python@v2
       with:
         python-version: '3.8'
-    
+        
+    - name: Install dependencies on Windows and macOS
+      if: matrix.os == 'windows-latest' || matrix.os == 'macos-latest'
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pyinstaller
+
+    - name: Build executable on Windows and macOS
+      if: matrix.os == 'windows-latest' || matrix.os == 'macos-latest'
+      run: |
+        pyinstaller --onefile --name=proteinscraper proteinscraper.py
+
     - name: Set up Docker container for Ubuntu
       if: matrix.os == 'ubuntu-latest'
       run: |
@@ -37,11 +49,6 @@ jobs:
         pyinstaller --onefile --name=proteinscraper proteinscraper.py &&
         cp dist/proteinscraper /workspace/dist/"
     
-    - name: Build executable
-      if: matrix.os == 'windows-latest' || matrix.os == 'macos-latest'
-      run: |
-        pyinstaller --onefile --name=proteinscraper proteinscraper.py
-
     - name: Upload build artifacts
       uses: actions/upload-artifact@v2
       with:
